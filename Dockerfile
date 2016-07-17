@@ -6,26 +6,27 @@ ENV OLETOOLS_VERSION 0.47
 
 COPY . /go/src/github.com/maliceio/malice-office
 RUN apk-install python
-RUN apk-install -t build-deps go git mercurial build-base py-pip python-dev py-setuptools \
+RUN apk-install -t build-deps go git mercurial build-base python-dev py-setuptools \
   && set -x \
   && echo "Install office..." \
-  && git clone --branch v${OLETOOLS_VERSION} https://github.com/decalage2/oletools.git /opt/oletools \
-  && cd /opt/oletools \
-  && python setup.py install \
-  && chmod +x /opt/oletools/oletools/*.py \
-  && ln -s /opt/oletools/oletools/ezhexviewer.py /usr/local/bin/ezhexviewer \
-  && ln -s /opt/oletools/oletools/mraptor.py /usr/local/bin/mraptor \
-  && ln -s /opt/oletools/oletools/olebrowse.py /usr/local/bin/olebrowse \
-  && ln -s /opt/oletools/oletools/oledir.py /usr/local/bin/oledir \
-  && ln -s /opt/oletools/oletools/oleid.py /usr/local/bin/oleid \
-  && ln -s /opt/oletools/oletools/olemap.py /usr/local/bin/olemap \
-  && ln -s /opt/oletools/oletools/olemeta.py /usr/local/bin/olemeta \
-  && ln -s /opt/oletools/oletools/oleobj.py /usr/local/bin/oleobj \
-  && ln -s /opt/oletools/oletools/oletimes.py /usr/local/bin/oletimes \
-  && ln -s /opt/oletools/oletools/olevba.py /usr/local/bin/olevba \
-  && ln -s /opt/oletools/oletools/ppt_parser.py /usr/local/bin/ppt_parser \
-  && ln -s /opt/oletools/oletools/pyxswf.py /usr/local/bin/pyxswf \
-  && ln -s /opt/oletools/oletools/rtfobj.py /usr/local/bin/rtfobj \
+  && cd /tmp \
+  && git clone --branch v${OLETOOLS_VERSION} https://github.com/decalage2/oletools.git \
+  && rm -rf /tmp/oletools/oletools/README* /tmp/oletools/oletools/doc \
+  && mkdir /opt && mv /tmp/oletools/oletools /opt \
+  && chmod +x /opt/oletools/*.py \
+  && ln -s /opt/oletools/ezhexviewer.py /usr/local/bin/ezhexviewer \
+  && ln -s /opt/oletools/mraptor.py /usr/local/bin/mraptor \
+  && ln -s /opt/oletools/olebrowse.py /usr/local/bin/olebrowse \
+  && ln -s /opt/oletools/oledir.py /usr/local/bin/oledir \
+  && ln -s /opt/oletools/oleid.py /usr/local/bin/oleid \
+  && ln -s /opt/oletools/olemap.py /usr/local/bin/olemap \
+  && ln -s /opt/oletools/olemeta.py /usr/local/bin/olemeta \
+  && ln -s /opt/oletools/oleobj.py /usr/local/bin/oleobj \
+  && ln -s /opt/oletools/oletimes.py /usr/local/bin/oletimes \
+  && ln -s /opt/oletools/olevba.py /usr/local/bin/olevba \
+  && ln -s /opt/oletools/ppt_parser.py /usr/local/bin/ppt_parser \
+  && ln -s /opt/oletools/pyxswf.py /usr/local/bin/pyxswf \
+  && ln -s /opt/oletools/rtfobj.py /usr/local/bin/rtfobj \
   && echo "Building scan Go binary..." \
   && cd /go/src/github.com/maliceio/malice-office \
   && export GOPATH=/go \
