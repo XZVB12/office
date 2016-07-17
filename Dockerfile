@@ -4,6 +4,7 @@ MAINTAINER blacktop, https://github.com/blacktop
 
 ENV OLETOOLS_VERSION 0.47
 
+COPY oledump_V0_0_24 /opt/oledump
 COPY . /go/src/github.com/maliceio/malice-office
 RUN apk-install python
 RUN apk-install -t build-deps go git mercurial build-base python-dev py-setuptools \
@@ -12,7 +13,8 @@ RUN apk-install -t build-deps go git mercurial build-base python-dev py-setuptoo
   && cd /tmp \
   && git clone --branch v${OLETOOLS_VERSION} https://github.com/decalage2/oletools.git \
   && rm -rf /tmp/oletools/oletools/README* /tmp/oletools/oletools/doc \
-  && mkdir /opt && mv /tmp/oletools/oletools /opt \
+  && mv /tmp/oletools/oletools /opt \
+  && sed -i 's/from thirdparty.colorclass import colorclass/from thirdparty.colorclass import color/' /opt/oletools/oledir.py \
   && chmod +x /opt/oletools/*.py \
   && ln -s /opt/oletools/ezhexviewer.py /usr/local/bin/ezhexviewer \
   && ln -s /opt/oletools/mraptor.py /usr/local/bin/mraptor \
