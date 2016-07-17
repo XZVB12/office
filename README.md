@@ -54,6 +54,7 @@ This will output to stdout and POST to malice results API webhook endpoint.
 ```json
 {
   "office": {
+  }
 }
 ```
 
@@ -62,7 +63,6 @@ This will output to stdout and POST to malice results API webhook endpoint.
 ---
 
 #### Office
-
 
 ---
 
