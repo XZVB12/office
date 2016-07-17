@@ -3,7 +3,7 @@ malice-office
 
 [![License](http://img.shields.io/:license-mit-blue.svg)](http://doge.mit-license.org) [![Docker Stars](https://img.shields.io/docker/stars/malice/office.svg)](https://hub.docker.com/r/malice/office/) [![Docker Pulls](https://img.shields.io/docker/pulls/malice/office.svg)](https://hub.docker.com/r/malice/office/)
 
-Malice Office/OLE Plugin
+Malice Office/OLE/RTF Plugin
 
 This repository contains a **Dockerfile** of the malice plugin **malice/office**.
 
