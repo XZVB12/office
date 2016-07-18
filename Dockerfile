@@ -1,4 +1,4 @@
-FROM gliderlabs/alpine
+FROM blacktop/yara
 
 MAINTAINER blacktop, https://github.com/blacktop
 
@@ -22,22 +22,21 @@ RUN apk-install -t build-deps go \
   && pip install --upgrade pip wheel \
   && pip install olefile oletools \
   && echo "Fixing error in oledir.py" \
-  && cd /usr/lib/python2.7/site-packages/oletools \
-  && sed -i 's/from thirdparty.colorclass import colorclass/from thirdparty.colorclass import color/' oledir.py \
-  && chmod +x *.py \
-  && ln -s ezhexviewer.py /usr/local/bin/ezhexviewer \
-  && ln -s mraptor.py /usr/local/bin/mraptor \
-  && ln -s olebrowse.py /usr/local/bin/olebrowse \
-  && ln -s oledir.py /usr/local/bin/oledir \
-  && ln -s oleid.py /usr/local/bin/oleid \
-  && ln -s olemap.py /usr/local/bin/olemap \
-  && ln -s olemeta.py /usr/local/bin/olemeta \
-  && ln -s oleobj.py /usr/local/bin/oleobj \
-  && ln -s oletimes.py /usr/local/bin/oletimes \
-  && ln -s olevba.py /usr/local/bin/olevba \
-  && ln -s ppt_parser.py /usr/local/bin/ppt_parser \
-  && ln -s pyxswf.py /usr/local/bin/pyxswf \
-  && ln -s rtfobj.py /usr/local/bin/rtfobj \
+  && sed -i 's/from thirdparty.colorclass import colorclass/from thirdparty.colorclass import color/' /usr/lib/python2.7/site-packages/oletools/oledir.py \
+  && chmod +x /usr/lib/python2.7/site-packages/oletools/*.py \
+  && ln -s /usr/lib/python2.7/site-packages/oletools/ezhexviewer.py /usr/local/bin/ezhexviewer \
+  && ln -s /usr/lib/python2.7/site-packages/oletools/mraptor.py /usr/local/bin/mraptor \
+  && ln -s /usr/lib/python2.7/site-packages/oletools/olebrowse.py /usr/local/bin/olebrowse \
+  && ln -s /usr/lib/python2.7/site-packages/oletools/oledir.py /usr/local/bin/oledir \
+  && ln -s /usr/lib/python2.7/site-packages/oletools/oleid.py /usr/local/bin/oleid \
+  && ln -s /usr/lib/python2.7/site-packages/oletools/olemap.py /usr/local/bin/olemap \
+  && ln -s /usr/lib/python2.7/site-packages/oletools/olemeta.py /usr/local/bin/olemeta \
+  && ln -s /usr/lib/python2.7/site-packages/oletools/oleobj.py /usr/local/bin/oleobj \
+  && ln -s /usr/lib/python2.7/site-packages/oletools/oletimes.py /usr/local/bin/oletimes \
+  && ln -s /usr/lib/python2.7/site-packages/oletools/olevba.py /usr/local/bin/olevba \
+  && ln -s /usr/lib/python2.7/site-packages/oletools/ppt_parser.py /usr/local/bin/ppt_parser \
+  && ln -s /usr/lib/python2.7/site-packages/oletools/pyxswf.py /usr/local/bin/pyxswf \
+  && ln -s /usr/lib/python2.7/site-packages/oletools/rtfobj.py /usr/local/bin/rtfobj \
   && echo "Install oledump..." \
   && curl -Ls https://${OLEDUMP_URL} > /tmp/oledump.zip \
   && cd /tmp \
