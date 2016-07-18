@@ -20,7 +20,8 @@ RUN apk-install -t build-deps go \
   && export PIP_NO_CACHE_DIR=off \
   && export PIP_DISABLE_PIP_VERSION_CHECK=on \
   && pip install --upgrade pip wheel \
-  && pip install olefile oletools \
+  && pip install https://github.com/decalage2/olefile/zipball/master \
+  && pip install https://github.com/decalage2/oletools/zipball/master \
   && echo "Fixing error in oledir.py" \
   && sed -i 's/from thirdparty.colorclass import colorclass/from thirdparty.colorclass import color/' /usr/lib/python2.7/site-packages/oletools/oledir.py \
   && chmod +x /usr/lib/python2.7/site-packages/oletools/*.py \
