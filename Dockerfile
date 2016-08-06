@@ -3,6 +3,7 @@ FROM blacktop/yara
 MAINTAINER blacktop, https://github.com/blacktop
 
 ENV OLEDUMP_URL didierstevens.com/files/software/oledump_V0_0_24.zip
+ENV RTFDUMP_URL didierstevens.com/files/software/rtfdump_V0_0_3.zip
 
 COPY . /go/src/github.com/maliceio/malice-office
 RUN apk-install python
@@ -45,6 +46,13 @@ RUN apk-install -t build-deps go \
   && unzip oledump.zip -d /opt/oledump \
   && chmod +x /opt/oledump/oledump.py  \
   && ln -s /opt/oledump/oledump.py /usr/local/bin/oledump \
+  && echo "Install rtfdump..." \
+  && curl -Ls https://${RTFDUMP_URL} > /tmp/rtfdump.zip \
+  && cd /tmp \
+  && mkdir -p /opt/rtfdump \
+  && unzip rtfdump.zip -d /opt/rtfdump \
+  && chmod +x /opt/rtfdump/rtfdump.py  \
+  && ln -s /opt/rtfdump/rtfdump.py /usr/local/bin/rtfdump \
   && echo "Building scan Go binary..." \
   && cd /go/src/github.com/maliceio/malice-office \
   && export GOPATH=/go \
