@@ -56,7 +56,9 @@ RUN apk-install -t build-deps go \
   && curl -Ls https://github.com/decalage2/ViperMonkey/archive/master.zip > /tmp/ViperMonkey.zip \
   && mkdir -p /opt/ViperMonkey \
   && unzip ViperMonkey.zip -d /opt/ViperMonkey \
-  && chmod +x /opt/ViperMonkey/*.py  \
+  && cd /opt/ViperMonkey \
+  && pip install prettytable colorlog colorama pyparsing \
+  && chmod +x vmonkey.py vbashell.py \
   && ln -s /opt/ViperMonkey/vmonkey.py /usr/local/bin/vmonkey \
   && ln -s /opt/ViperMonkey/vbashell.py /usr/local/bin/vbashell \
   && echo "Building scan Go binary..." \
