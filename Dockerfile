@@ -55,7 +55,8 @@ RUN apk-install -t build-deps go \
   && echo "Install ViperMonkey..." \
   && curl -Ls https://github.com/decalage2/ViperMonkey/archive/master.zip > /tmp/ViperMonkey.zip \
   && mkdir -p /opt/ViperMonkey \
-  && unzip ViperMonkey.zip -d /opt/ViperMonkey \
+  && unzip ViperMonkey.zip \
+  && mv ViperMonkey-master/ /opt/ViperMonkey \
   && cd /opt/ViperMonkey \
   && pip install prettytable colorlog colorama pyparsing \
   && chmod +x vmonkey.py vbashell.py \
