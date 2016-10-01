@@ -54,14 +54,14 @@ RUN apk-install -t build-deps go \
   && ln -s /opt/rtfdump/rtfdump.py /usr/local/bin/rtfdump \
   && echo "Install ViperMonkey..." \
   && curl -Ls https://github.com/decalage2/ViperMonkey/archive/master.zip > /tmp/ViperMonkey.zip \
-  && mkdir -p /opt/ViperMonkey \
+  && mkdir -p /opt/vipermonkey \
   && unzip ViperMonkey.zip \
-  && mv ViperMonkey-master/ /opt/ViperMonkey \
-  && cd /opt/ViperMonkey \
+  && mv ViperMonkey-master/vipermonkey/ /opt/vipermonkey \
+  && cd /opt/vipermonkey \
   && pip install prettytable colorlog colorama pyparsing \
   && chmod +x vmonkey.py vbashell.py \
-  && ln -s /opt/ViperMonkey/vmonkey.py /usr/local/bin/vmonkey \
-  && ln -s /opt/ViperMonkey/vbashell.py /usr/local/bin/vbashell \
+  && ln -s /opt/vipermonkey/vmonkey.py /usr/local/bin/vmonkey \
+  && ln -s /opt/vipermonkey/vbashell.py /usr/local/bin/vbashell \
   && echo "Building scan Go binary..." \
   && cd /go/src/github.com/maliceio/malice-office \
   && export GOPATH=/go \
