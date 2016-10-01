@@ -2,8 +2,8 @@ FROM blacktop/yara
 
 MAINTAINER blacktop, https://github.com/blacktop
 
-ENV OLEDUMP_URL didierstevens.com/files/software/oledump_V0_0_24.zip
-ENV RTFDUMP_URL didierstevens.com/files/software/rtfdump_V0_0_3.zip
+ENV OLEDUMP_URL didierstevens.com/files/software/oledump_V0_0_25.zip
+ENV RTFDUMP_URL didierstevens.com/files/software/rtfdump_V0_0_4.zip
 
 COPY . /go/src/github.com/maliceio/malice-office
 RUN apk-install python
