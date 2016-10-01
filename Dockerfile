@@ -48,11 +48,17 @@ RUN apk-install -t build-deps go \
   && ln -s /opt/oledump/oledump.py /usr/local/bin/oledump \
   && echo "Install rtfdump..." \
   && curl -Ls https://${RTFDUMP_URL} > /tmp/rtfdump.zip \
-  && cd /tmp \
   && mkdir -p /opt/rtfdump \
   && unzip rtfdump.zip -d /opt/rtfdump \
   && chmod +x /opt/rtfdump/rtfdump.py  \
   && ln -s /opt/rtfdump/rtfdump.py /usr/local/bin/rtfdump \
+  && echo "Install ViperMonkey..." \
+  && curl -Ls https://github.com/decalage2/ViperMonkey/archive/master.zip > /tmp/ViperMonkey.zip \
+  && mkdir -p /opt/ViperMonkey \
+  && unzip ViperMonkey.zip -d /opt/ViperMonkey \
+  && chmod +x /opt/ViperMonkey/*.py  \
+  && ln -s /opt/ViperMonkey/vmonkey.py /usr/local/bin/vmonkey \
+  && ln -s /opt/ViperMonkey/vbashell.py /usr/local/bin/vbashell \
   && echo "Building scan Go binary..." \
   && cd /go/src/github.com/maliceio/malice-office \
   && export GOPATH=/go \
