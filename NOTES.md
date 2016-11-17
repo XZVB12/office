@@ -5,6 +5,7 @@ Notes
 -	http://reconstructer.org/code/OfficeMalScanner.zip
 -	https://blog.didierstevens.com/my-software/#oledump
 - http://decalage.info/vba_emulation
+- https://github.com/bontchev/pcodedmp
 
 Todo
 ====
