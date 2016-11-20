@@ -12,3 +12,4 @@ Todo
 
 -	[ ] oledump get stream hashes
 -	[ ] oledump -p plugin_http_heuristics.py
+- [ ] use oledump to extract embedded files
