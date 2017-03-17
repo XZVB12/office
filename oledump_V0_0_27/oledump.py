@@ -2,8 +2,8 @@
 
 __description__ = 'Analyze OLE files (Compound Binary Files)'
 __author__ = 'Didier Stevens'
-__version__ = '0.0.24'
-__date__ = '2016/06/08'
+__version__ = '0.0.27'
+__date__ = '2017/03/04'
 
 """
 
@@ -62,6 +62,10 @@ History:
   2015/12/16: 0.0.22 some enhancements for --raw option
   2015/12/22: 0.0.23 updated cut syntax
   2016/06/08: 0.0.24 option -v works with option -E
+  2016/08/01: 0.0.25 added Magic to info
+  2016/10/16: decompressed.replace('\r\n', '\n'); added plugindir and decoderdir options by Remi Pointel
+  2016/12/11: 0.0.26 added indicator O for OLE10Native
+  2017/03/04: 0.0.27 added externals for YARA rules
 
 Todo:
 """
@@ -240,14 +244,14 @@ C:\Demo>oledump.py -s 7 --vbadecompresscorrupt Book2-vba.xls
 
 Option -r can be used together with option -v to decompress a VBA macro stream that was extracted through some other mean than oledump. In such case, you provide the file that contains the compressed macro, instead of the OLE file.
 
-Microsoft Office files can contain embedded objects. They show up like this (notice stream 6 Ole10Native):
+Microsoft Office files can contain embedded objects. They show up like this (notice stream 6 Ole10Native with indicator O):
 C:\Demo>oledump.py Book1-insert-object-calc-rol3.exe.xls
   1:       109 '\\x01CompObj'
   2:       276 '\\x05DocumentSummaryInformation'
   3:       224 '\\x05SummaryInformation'
   4:        80 'MBD0004D0D1/\\x01CompObj'
   5:        20 'MBD0004D0D1/\\x01Ole'
-  6:    114798 'MBD0004D0D1/\\x01Ole10Native'
+  6: O  114798 'MBD0004D0D1/\\x01Ole10Native'
   7:     11312 'Workbook'
 
 To get more info about the embedded object, use option -i like this:
@@ -293,7 +297,7 @@ Option -q (quiet) only displays output from the plugins, it suppresses output fr
 C:\Demo>oledump.py -p plugin_http_heuristics -q sample.xls
 http://???.???.???.??:8080/stat/lld.php
 
-When specifying plugins, you do not need to give the full path nor the .py extension (it's allowed though). If you just give the filename without a path, oledump will search for the plugin in the current directory and in the directory where oledump.py is located. You can specify more than one plugin by separating their names with a comma (,), or by using a at-file. A at-file is a text file containing the names of the plugins (one per line). To indicate to oledump that a text file is a at-file, you prefix iw with @, like this:
+When specifying plugins, you do not need to give the full path nor the .py extension (it's allowed though). If you just give the filename without a path, oledump will search for the plugin in the current directory and in the directory where oledump.py is located. You can specify more than one plugin by separating their names with a comma (,), or by using a at-file. A at-file is a text file containing the names of the plugins (one per line). If plugins are located in a different directory, you could specify it with the --plugindir option. To indicate to oledump that a text file is a at-file, you prefix iw with @, like this:
 oledump.py -p @all-plugins.txt sample.xls
 
 Some plugins take options too. Use --pluginoptions to specify these options.
@@ -306,7 +310,7 @@ C:\Demo>oledump.py -y contains_pe_file.yara Book1-insert-object-exe.xls
   2:       256 '\\x05DocumentSummaryInformation'
   3:       216 '\\x05SummaryInformation'
   4:        76 'MBD0049DB15/\\x01CompObj'
-  5:     60326 'MBD0049DB15/\\x01Ole10Native'
+  5: O   60326 'MBD0049DB15/\\x01Ole10Native'
                YARA rule: Contains_PE_File
   6:     19567 'Workbook'
 
@@ -318,7 +322,7 @@ C:\Demo>oledump.py -y contains_pe_file.yara --yarastrings Book1-insert-object-ex
   2:       256 '\\x05DocumentSummaryInformation'
   3:       216 '\\x05SummaryInformation'
   4:        76 'MBD0049DB15/\\x01CompObj'
-  5:     60326 'MBD0049DB15/\\x01Ole10Native'
+  5: O   60326 'MBD0049DB15/\\x01Ole10Native'
                YARA rule: Contains_PE_File
                000064 $a:
                 4d5a
@@ -341,6 +345,8 @@ rule Contains_PE_File
 
 Distributed together with oledump are the YARA rules maldoc.yara. These are YARA rules to detect shellcode, based on Frank Boldewin's shellcode detector used in OfficeMalScanner.
 
+Two external variables are declared for use in YARA rules: streamname contains the stream name, and VBA is True when the YARA engine is given VBA source code to scan. 
+
 When looking for traces of Windows executable code (PE files, shellcode, ...) with YARA rules, one must take into account the fact that the executable code might have been encoded (for example via XOR and a key) to evade detection.
 To deal with this possibility, oledump supports decoders. A decoder is another type of plugin, that will bruteforce a type of encoding on each stream. For example, decoder_xor1 will encode each stream via XOR and a key of 1 byte. So effectively, 256 different encodings of the stream will be scanned by the YARA rules. 256 encodings because: XOR key 0x00, XOR key 0x01, XOR key 0x02, ..., XOR key 0xFF
 Here is an example:
@@ -349,19 +355,20 @@ C:\Demo>oledump.py -y contains_pe_file.yara -D decoder_xor1 Book1-insert-object-
   2:       256 '\\x05DocumentSummaryInformation'
   3:       216 '\\x05SummaryInformation'
   4:        76 'MBD0049DB15/\\x01CompObj'
-  5:     60326 'MBD0049DB15/\\x01Ole10Native'
+  5: O   60326 'MBD0049DB15/\\x01Ole10Native'
                YARA rule (stream decoder: XOR 1 byte key 0x14): Contains_PE_File
   6:     19567 'Workbook'
 
 The YARA rule triggers on stream 5. It contains a PE file encoded via XORing each byte with 0x14.
 
 You can specify decoders in exactly the same way as plugins, for example specifying more than one decoder separated by a comma ,.
+If decoders are located in a different directory, you could specify it with the --decoderdir option.
 C:\Demo>oledump.py -y contains_pe_file.yara -D decoder_xor1,decoder_rol1,decoder_add1 Book1-insert-object-exe-xor14.xls
   1:       107 '\\x01CompObj'
   2:       256 '\\x05DocumentSummaryInformation'
   3:       216 '\\x05SummaryInformation'
   4:        76 'MBD0049DB15/\\x01CompObj'
-  5:     60326 'MBD0049DB15/\\x01Ole10Native'
+  5: O   60326 'MBD0049DB15/\\x01Ole10Native'
                YARA rule (stream decoder: XOR 1 byte key 0x14): Contains_PE_File
   6:     19567 'Workbook'
 
@@ -637,7 +644,7 @@ def Decompress(compressedData):
         if decompressedChunk == None:
             return (False, decompressed)
         decompressed += decompressedChunk
-    return (True, decompressed)
+    return (True, decompressed.replace('\r\n', '\n'))
 
 def FindCompression(data):
     searchString = '\x00Attribut'
@@ -715,11 +722,14 @@ def Extract(data):
         return 'Error: extraction failed'
     return result[3]
 
+def GenerateMAGIC(data):
+    return binascii.b2a_hex(data) + ' ' + ''.join([IFF(ord(c) >= 32, c, '.') for c in data])
+
 def Info(data):
     result = ExtractOle10Native(data)
     if result == []:
         return 'Error: extraction failed'
-    return 'String 1: %s\nString 2: %s\nString 3: %s\nSize embedded file: %d\nMD5 embedded file: %s\n' % (result[0], result[1], result[2], len(result[3]), hashlib.md5(result[3]).hexdigest())
+    return 'String 1: %s\nString 2: %s\nString 3: %s\nSize embedded file: %d\nMD5 embedded file: %s\nMAGIC:  %s\nHeader: %s\n' % (result[0], result[1], result[2], len(result[3]), hashlib.md5(result[3]).hexdigest(), GenerateMAGIC(result[3][0:4]), GenerateMAGIC(result[3][0:16]))
 
 def IfWIN32SetBinary(io):
     if sys.platform == 'win32':
@@ -759,10 +769,15 @@ def ExpandFilenameArguments(filenames):
 class cPluginParent():
     macroOnly = False
 
-def LoadPlugins(plugins, verbose):
+def LoadPlugins(plugins, plugindir, verbose):
     if plugins == '':
         return
-    scriptPath = os.path.dirname(sys.argv[0])
+
+    if plugindir == '':
+        scriptPath = os.path.dirname(sys.argv[0])
+    else:
+        scriptPath = plugindir
+
     for plugin in sum(map(ProcessAt, plugins.split(',')), []):
         try:
             if not plugin.lower().endswith('.py'):
@@ -786,10 +801,15 @@ def AddDecoder(cClass):
 class cDecoderParent():
     pass
 
-def LoadDecoders(decoders, verbose):
+def LoadDecoders(decoders, decoderdir, verbose):
     if decoders == '':
         return
-    scriptPath = os.path.dirname(sys.argv[0])
+
+    if decoderdir == '':
+        scriptPath = os.path.dirname(sys.argv[0])
+    else:
+        scriptPath = decoderdir
+
     for decoder in sum(map(ProcessAt, decoders.split(',')), []):
         try:
             if not decoder.lower().endswith('.py'):
@@ -1259,6 +1279,18 @@ def GenerateExtraInfo(extra, index, indicator, name, stream):
             extra = extra.replace(variable, dExtras[variable](stream))
     return prefix + extra.replace(r'\t', '\t').replace(r'\n', '\n')
 
+def OLE10HeaderPresent(data):
+    length = len(data)
+    if length < 6:
+        return False
+    size, data = ReadDWORD(data)
+    if size == None:
+        return False
+    if size + 4 != length:
+        return False
+    version, data = ReadWORD(data)
+    return version ==2
+
 def OLESub(ole, prefix, rules, options):
     global plugins
     global decoders
@@ -1287,6 +1319,7 @@ def OLESub(ole, prefix, rules, options):
 
     if options.select == '':
         counter = 1
+        vbaConcatenate = ''
         for fname in ole.listdir():
             stream = None
             indicator = ' '
@@ -1306,6 +1339,8 @@ def OLESub(ole, prefix, rules, options):
                         indicator = 'M'
                         if MacrosContainsOnlyAttributesOrOptions(stream):
                             indicator = 'm'
+                elif OLE10HeaderPresent(stream):
+                    indicator = 'O'
             if not options.quiet:
                 index = '%s%d' % (prefix, counter)
                 line = '%3s: %s %s %s' % (index, indicator, lengthString, PrintableName(fname))
@@ -1356,13 +1391,24 @@ def OLESub(ole, prefix, rules, options):
                         return returnCode
                 for oDecoder in oDecoders:
                     while oDecoder.Available():
-                        for result in rules.match(data=oDecoder.Decode()):
+                        for result in rules.match(data=oDecoder.Decode(), externals={'streamname': PrintableName(fname), 'VBA': False}):
                             print('               YARA rule%s: %s' % (IFF(oDecoder.Name() == '', '', ' (stream decoder: %s)' % oDecoder.Name()), result.rule))
                             if options.yarastrings:
                                 for stringdata in result.strings:
                                     print('               %06x %s:' % (stringdata[0], stringdata[1]))
                                     print('                %s' % binascii.hexlify(C2BIP3(stringdata[2])))
                                     print('                %s' % repr(stringdata[2]))
+            if indicator.lower() == 'm':
+                vbaConcatenate += SearchAndDecompress(stream) + '\n'
+        if options.yara != None and vbaConcatenate != '':
+            print('All VBA source code:')
+            for result in rules.match(data=vbaConcatenate, externals={'streamname': '', 'VBA': True}):
+                print('               YARA rule: %s' % result.rule)
+                if options.yarastrings:
+                    for stringdata in result.strings:
+                        print('               %06x %s:' % (stringdata[0], stringdata[1]))
+                        print('                %s' % binascii.hexlify(C2BIP3(stringdata[2])))
+                        print('                %s' % repr(stringdata[2]))
     else:
         if len(decoders) > 1:
             print('Error: provide only one decoder when using option select')
@@ -1410,7 +1456,7 @@ def YARACompile(fileordirname):
     else:
         for filename in ProcessAt(fileordirname):
             dFilepaths[filename] = filename
-    return yara.compile(filepaths=dFilepaths)
+    return yara.compile(filepaths=dFilepaths, externals={'streamname': '', 'VBA': False})
 
 def FilenameInSimulations(filename):
     if dslsimulationdb == None:
@@ -1426,11 +1472,11 @@ def OLEDump(filename, options):
 
     global plugins
     plugins = []
-    LoadPlugins(options.plugins, True)
+    LoadPlugins(options.plugins, options.plugindir, True)
 
     global decoders
     decoders = []
-    LoadDecoders(options.decoders, True)
+    LoadDecoders(options.decoders, options.decoderdir, True)
 
     if options.raw:
         if filename == '':
@@ -1584,10 +1630,12 @@ def Main():
     oParser.add_option('-i', '--info', action='store_true', default=False, help='print extra info for selected item')
     oParser.add_option('-p', '--plugins', type=str, default='', help='plugins to load (separate plugins with a comma , ; @file supported)')
     oParser.add_option('--pluginoptions', type=str, default='', help='options for the plugin')
+    oParser.add_option('--plugindir', type=str, default='', help='directory for the plugin')
     oParser.add_option('-q', '--quiet', action='store_true', default=False, help='only print output from plugins')
     oParser.add_option('-y', '--yara', help="YARA rule-file, @file or directory to check streams (YARA search doesn't work with -s option)")
     oParser.add_option('-D', '--decoders', type=str, default='', help='decoders to load (separate decoders with a comma , ; @file supported)')
     oParser.add_option('--decoderoptions', type=str, default='', help='options for the decoder')
+    oParser.add_option('--decoderdir', type=str, default='', help='directory for the decoder')
     oParser.add_option('--yarastrings', action='store_true', default=False, help='Print YARA strings')
     oParser.add_option('-M', '--metadata', action='store_true', default=False, help='Print metadata')
     oParser.add_option('-c', '--calc', action='store_true', default=False, help='Add extra calculated data to output, like hashes')
