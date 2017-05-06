@@ -1,13 +1,13 @@
 FROM blacktop/yara
 
-MAINTAINER blacktop, https://github.com/blacktop
+LABEL maintainer "https://github.com/blacktop"
 
 ENV OLEDUMP_URL didierstevens.com/files/software/oledump_V0_0_25.zip
 ENV RTFDUMP_URL didierstevens.com/files/software/rtfdump_V0_0_4.zip
 
 COPY . /go/src/github.com/maliceio/malice-office
-RUN apk-install python
-RUN apk-install -t build-deps go \
+RUN apk add --no-cache python
+RUN apk add --no-cache -t build-deps go \
                               git \
                               curl \
                               unzip \
@@ -78,5 +78,4 @@ RUN apk-install -t build-deps go \
 WORKDIR /malware
 
 ENTRYPOINT ["/bin/scan"]
-
 CMD ["--help"]
