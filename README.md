@@ -1,7 +1,7 @@
-malice-office
-=============
+malice-office (WIP)
+===================
 
-[![License](http://img.shields.io/:license-mit-blue.svg)](http://doge.mit-license.org) [![Docker Stars](https://img.shields.io/docker/stars/malice/office.svg)](https://hub.docker.com/r/malice/office/) [![Docker Pulls](https://img.shields.io/docker/pulls/malice/office.svg)](https://hub.docker.com/r/malice/office/)
+[![License](http://img.shields.io/:license-mit-blue.svg)](http://doge.mit-license.org) [![Docker Stars](https://img.shields.io/docker/stars/malice/office.svg)](https://hub.docker.com/r/malice/office/) [![Docker Pulls](https://img.shields.io/docker/pulls/malice/office.svg)](https://hub.docker.com/r/malice/office/) [![Docker Image](https://img.shields.io/badge/docker%20image-77.4MB-blue.svg)](https://hub.docker.com/r/malice/office/)
 
 Malice Office/OLE/RTF Plugin
 
@@ -9,7 +9,7 @@ This repository contains a **Dockerfile** of the malice plugin **malice/office**
 
 ### Dependencies
 
--	[gliderlabs/alpine](https://hub.docker.com/_/gliderlabs/alpine/)
+-	[blacktop/yara](https://hub.docker.com/r/blacktop/yara/)
 
 ### Installation
 
@@ -99,4 +99,4 @@ Find a bug? Want more features? Find something missing in the documentation? Let
 
 ### License
 
-MIT Copyright (c) 2016 **blacktop**
+MIT Copyright (c) 2016-2017 **blacktop**
