@@ -6,6 +6,7 @@ Notes
 -	https://blog.didierstevens.com/my-software/#oledump
 - http://decalage.info/vba_emulation
 - https://github.com/bontchev/pcodedmp
+- https://github.com/decalage2/oletools/blob/master/oletools/msodde.py
 
 Todo
 ====
