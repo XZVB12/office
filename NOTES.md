@@ -7,6 +7,8 @@ Notes
 - http://decalage.info/vba_emulation
 - https://github.com/bontchev/pcodedmp
 - https://github.com/decalage2/oletools/blob/master/oletools/msodde.py
+- https://bitbucket.org/cse-assemblyline/alsvc_cleaver
+- https://bitbucket.org/cse-assemblyline/alsvc_oletools/src
 
 Todo
 ====
