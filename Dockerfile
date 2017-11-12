@@ -2,11 +2,16 @@ FROM blacktop/yara
 
 LABEL maintainer "https://github.com/blacktop"
 
+LABEL malice.plugin.repository = "https://github.com/malice-plugins/office.git"
+LABEL malice.plugin.category="office"
+LABEL malice.plugin.mime="application/vnd.ms-*"
+LABEL malice.plugin.docker.engine="*"
+
 ENV OLEDUMP_URL didierstevens.com/files/software/oledump_V0_0_26.zip
 ENV RTFDUMP_URL didierstevens.com/files/software/rtfdump_V0_0_5.zip
 
 COPY . /go/src/github.com/maliceio/malice-office
-RUN apk add --no-cache python
+RUN apk add --no-cache python py-setuptools
 RUN apk add --no-cache -t build-deps go \
                               git \
                               curl \

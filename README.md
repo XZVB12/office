@@ -1,11 +1,13 @@
 malice-office (WIP)
 ===================
 
-[![License](http://img.shields.io/:license-mit-blue.svg)](http://doge.mit-license.org) [![Docker Stars](https://img.shields.io/docker/stars/malice/office.svg)](https://hub.docker.com/r/malice/office/) [![Docker Pulls](https://img.shields.io/docker/pulls/malice/office.svg)](https://hub.docker.com/r/malice/office/) [![Docker Image](https://img.shields.io/badge/docker%20image-77.4MB-blue.svg)](https://hub.docker.com/r/malice/office/)
+[![Circle CI](https://circleci.com/gh/malice-plugins/office.png?style=shield)](https://circleci.com/gh/malice-plugins/office) [![License](http://img.shields.io/:license-mit-blue.svg)](http://doge.mit-license.org) [![Docker Stars](https://img.shields.io/docker/stars/malice/office.svg)](https://hub.docker.com/r/malice/office/) [![Docker Pulls](https://img.shields.io/docker/pulls/malice/office.svg)](https://hub.docker.com/r/malice/office/) [![Docker Image](https://img.shields.io/badge/docker%20image-77.4MB-blue.svg)](https://hub.docker.com/r/malice/office/)
 
 Malice Office/OLE/RTF Plugin
 
-This repository contains a **Dockerfile** of the malice plugin **malice/office**.
+> This repository contains a **Dockerfile** of the malice plugin **malice/office**.
+
+___
 
 ### Dependencies
 
@@ -49,7 +51,10 @@ Run 'office COMMAND --help' for more information on a command.
 
 This will output to stdout and POST to malice results API webhook endpoint.
 
-### Sample Output JSON:
+Sample Output
+-------------
+
+### JSON:
 
 ```json
 {
@@ -58,44 +63,40 @@ This will output to stdout and POST to malice results API webhook endpoint.
 }
 ```
 
-### Sample Output STDOUT (Markdown Table):
+### Markdown:
 
 ---
 
-#### Office
+#### office
 
 ---
 
-### To write results to [RethinkDB](https://rethinkdb.com)
+Documentation
+-------------
 
-```bash
-$ docker volume create --name malice
-$ docker run -d -p 28015:28015 -p 8080:8080 -v malice:/data --name rethink rethinkdb
-$ docker run --rm -v /path/to/malware:/malware:ro --link rethink:rethink malice/office -t FILE
-```
-
-### To Run on OSX
-
--	Install [Homebrew](http://brew.sh)
-
-```bash
-$ brew install caskroom/cask/brew-cask
-$ brew cask install virtualbox
-$ brew install docker
-$ brew install docker-machine
-$ docker-machine create --driver virtualbox malice
-$ eval $(docker-machine env malice)
-```
-
-### Documentation
+-	[To write results to ElasticSearch](https://github.com/malice-plugins/office/blob/master/docs/elasticsearch.md)
+-	[To create a Office scan micro-service](https://github.com/malice-plugins/office/blob/master/docs/web.md)
+-	[To post results to a webhook](https://github.com/malice-plugins/office/blob/master/docs/callback.md)
 
 ### Issues
 
-Find a bug? Want more features? Find something missing in the documentation? Let me know! Please don't hesitate to [file an issue](https://github.com/maliceio/malice-office/issues/new) and I'll get right on it.
+Find a bug? Want more features? Find something missing in the documentation? Let me know! Please don't hesitate to [file an issue](https://github.com/malice-plugins/office/issues/new) and I'll get right on it.
+
+### CHANGELOG
+
+See [`CHANGELOG.md`](https://github.com/malice-plugins/office/blob/master/CHANGELOG.md)
+
+### Contributing
+
+[See all contributors on GitHub](https://github.com/malice-plugins/office/graphs/contributors).
+
+Please update the [CHANGELOG.md](https://github.com/malice-plugins/office/blob/master/CHANGELOG)
 
 ### Credits
 
 ### TODO
+
+- [ ] add other's LICENSEs
 
 ### License
 
