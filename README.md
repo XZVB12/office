@@ -1,5 +1,6 @@
-malice-office (WIP)
-===================
+![office logo](https://github.com/malice-plugins/office/blob/master/docs/office.png)
+
+# malice-office (WIP)
 
 [![Circle CI](https://circleci.com/gh/malice-plugins/office.png?style=shield)](https://circleci.com/gh/malice-plugins/office) [![License](http://img.shields.io/:license-mit-blue.svg)](http://doge.mit-license.org) [![Docker Stars](https://img.shields.io/docker/stars/malice/office.svg)](https://hub.docker.com/r/malice/office/) [![Docker Pulls](https://img.shields.io/docker/pulls/malice/office.svg)](https://hub.docker.com/r/malice/office/) [![Docker Image](https://img.shields.io/badge/docker%20image-77.4MB-blue.svg)](https://hub.docker.com/r/malice/office/)
 
@@ -7,21 +8,21 @@ Malice Office/OLE/RTF Plugin
 
 > This repository contains a **Dockerfile** of the malice plugin **malice/office**.
 
-___
+---
 
-### Dependencies
+## Dependencies
 
--	[blacktop/yara](https://hub.docker.com/r/blacktop/yara/)
+- [blacktop/yara](https://hub.docker.com/r/blacktop/yara/)
 
-### Installation
+## Installation
 
-1.	Install [Docker](https://www.docker.io/).
-2.	Download [trusted build](https://hub.docker.com/r/malice/office/) from public [DockerHub](https://hub.docker.com): `docker pull malice/office`
+1. Install [Docker](https://www.docker.io/).
+2. Download [trusted build](https://hub.docker.com/r/malice/office/) from public [DockerHub](https://hub.docker.com): `docker pull malice/office`
 
-### Usage
+## Usage
 
 ```
-docker run --rm -v /path/to/file:/malware:ro malice/office FILE
+$ docker run --rm -v /path/to/file:/malware:ro malice/office FILE
 ```
 
 ```bash
@@ -51,53 +52,54 @@ Run 'office COMMAND --help' for more information on a command.
 
 This will output to stdout and POST to malice results API webhook endpoint.
 
-Sample Output
--------------
+## Sample Output
 
-### JSON:
+### [JSON](https://github.com/malice-plugins/office/blob/master/docs/results.json)
 
 ```json
 {
-  "office": {
-  }
+  "office":
 }
 ```
 
-### Markdown:
+### [Markdown](https://github.com/malice-plugins/office/blob/master/docs/SAMPLE.md)
 
 ---
 
-#### office
+### office
 
 ---
 
-Documentation
--------------
+---
 
--	[To write results to ElasticSearch](https://github.com/malice-plugins/office/blob/master/docs/elasticsearch.md)
--	[To create a Office scan micro-service](https://github.com/malice-plugins/office/blob/master/docs/web.md)
--	[To post results to a webhook](https://github.com/malice-plugins/office/blob/master/docs/callback.md)
+## Documentation
 
-### Issues
+- [To write results to ElasticSearch](https://github.com/malice-plugins/office/blob/master/docs/elasticsearch.md)
+- [To create a Office scan micro-service](https://github.com/malice-plugins/office/blob/master/docs/web.md)
+- [To post results to a webhook](https://github.com/malice-plugins/office/blob/master/docs/callback.md)
+
+## Issues
 
 Find a bug? Want more features? Find something missing in the documentation? Let me know! Please don't hesitate to [file an issue](https://github.com/malice-plugins/office/issues/new) and I'll get right on it.
 
-### CHANGELOG
+## CHANGELOG
 
 See [`CHANGELOG.md`](https://github.com/malice-plugins/office/blob/master/CHANGELOG.md)
 
-### Contributing
+## Contributing
 
 [See all contributors on GitHub](https://github.com/malice-plugins/office/graphs/contributors).
 
 Please update the [CHANGELOG.md](https://github.com/malice-plugins/office/blob/master/CHANGELOG)
 
-### Credits
+## Credits
 
-### TODO
+Heavily (if not entirely) influenced by the [viper Office module](https://github.com/viper-framework/viper/blob/master/viper/modules/office.py) and by CSE's [alsvc_oletools](https://bitbucket.org/cse-assemblyline/alsvc_oletools)
 
-- [ ] add other's LICENSEs
+## TODO
 
-### License
+- [ ] add timeout protection
 
-MIT Copyright (c) 2016-2017 **blacktop**
+## License
+
+MIT Copyright (c) 2016 **blacktop**

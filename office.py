@@ -1,454 +1,204 @@
-# This file is part of Viper - https://github.com/viper-framework/viper
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+# This file is part of MaliceIO - https://github.com/malice-plugins/office
 # See the file 'LICENSE' for copying permission.
-'''
-Code based on the python-oletools package by Philippe Lagadec 2012-10-18
-http://www.decalage.info/python/oletools
-'''
 
+__description__ = 'Malice Office/OLE/RTF Plugin'
+__author__ = 'blacktop - <https://github.com/blacktop>'
+__version__ = '0.1.0'
+__date__ = '2018/08/027'
+
+import json
+import logging
 import os
-import re
-import zlib
-import struct
-import zipfile
-import xml.etree.ElementTree as ET
+from sys import path
 
-from viper.common.utils import string_clean, string_clean_hex
-from viper.common.abstracts import Module
-from viper.core.session import __sessions__
+import click
+import requests
+from flask import Flask, abort, jsonify, redirect, request
+from werkzeug.utils import secure_filename
 
-try:
-    import olefile
-    from oletools.olevba import VBA_Parser, VBA_Scanner
-    HAVE_OLE = True
-except ImportError:
-    HAVE_OLE = False
+from elastic import Elastic
+from malice import MalOffice
+from utils import json2markdown, sha256_checksum
+from utils.constants import ROOT
+
+log = logging.getLogger(__name__)
 
 
-class Office(Module):
-    cmd = 'office'
-    description = 'Office Document Parser'
-    authors = ['Kevin Breen', 'nex']
+def init_logging(verbose):
+    # create console handler and set level to debug
+    ch = logging.StreamHandler()
+    ch.setLevel(verbose)
+    ch.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+    # add ch to logger
+    log.addHandler(ch)
 
-    def __init__(self):
-        super(Office, self).__init__()
-        self.parser.add_argument('-m', '--meta', action='store_true', help='Get the metadata')
-        self.parser.add_argument('-o', '--oleid', action='store_true', help='Get the OLE information')
-        self.parser.add_argument('-s', '--streams', action='store_true', help='Show the document streams')
-        self.parser.add_argument('-e', '--export', metavar='dump_path', help='Export all objects')
-        self.parser.add_argument('-v', '--vba', action='store_true', help='Analyse Macro Code')
-        self.parser.add_argument('-c', '--code', metavar="code_path", help='Export Macro Code to File')
+    malofile = logging.getLogger('malice')
+    malofile.propagate = False
+    malofile.setLevel(verbose)
+    malofile.addHandler(ch)
 
-    ##
-    # HELPER FUNCTIONS
-    #
+    # get elasticsearch logger
+    es_logger = logging.getLogger('elasticsearch')
+    es_logger.propagate = False
+    es_logger.setLevel(verbose)
+    es_logger.addHandler(ch)
 
-    def detect_flash(self, data):
-        matches = []
-        for match in re.finditer('CWS|FWS', data):
-            start = match.start()
-            if (start + 8) > len(data):
-                # Header size larger than remaining data,
-                # this is not a SWF.
-                continue
 
-            # TODO: one struct.unpack should be simpler.
-            # Read Header
-            header = data[start:start + 3]
-            # Read Version
-            ver = struct.unpack('<b', data[start + 3])[0]
-            # Error check for version above 20
-            # TODO: is this accurate? (check SWF specifications).
-            if ver > 20:
-                continue
+def print_version(ctx, param, value):
+    if not value or ctx.resilient_parsing:
+        return
+    click.echo('v{}'.format(__version__))
+    ctx.exit()
 
-            # Read SWF Size.
-            size = struct.unpack('<i', data[start + 4:start + 8])[0]
-            if (start + size) > len(data) or size < 1024:
-                # Declared size larger than remaining data, this is not
-                # a SWF or declared size too small for a usual SWF.
-                continue
 
-            # Read SWF into buffer. If compressed read uncompressed size.
-            swf = data[start:start + size]
-            is_compressed = False
-            swf_deflate = None
-            if 'CWS' in header:
-                is_compressed = True
-                # Data after header (8 bytes) until the end is compressed
-                # with zlib. Attempt to decompress it to check if it is valid.
-                compressed_data = swf[8:]
+@click.group(context_settings=dict(help_option_names=['-h', '--help']))
+@click.option(
+    '--version', is_flag=True, callback=print_version, expose_value=False, is_eager=True, help='print the version')
+def office():
+    """Malice Office/OLE/RTF Plugin
 
-                try:
-                    swf_deflate = zlib.decompress(compressed_data)
-                except:
-                    continue
+    Author: blacktop <https://github.com/blacktop>
+    """
 
-            # Else we don't check anything at this stage, we only assume it is a
-            # valid SWF. So there might be false positives for uncompressed SWF.
-            matches.append((start, size, is_compressed, swf, swf_deflate))
 
-        return matches
+@office.command('scan', short_help='scan a file')
+@click.argument('file_path', type=click.Path(exists=True))
+@click.option('-v', '--verbose', count=True, help='verbose output')
+@click.option('-t', '--table', is_flag=True, help='output as Markdown table')
+@click.option(
+    '-x',
+    '--proxy',
+    default=lambda: os.environ.get('MALICE_PROXY', ''),
+    help='proxy settings for Malice webhook endpoint [$MALICE_PROXY]',
+    metavar='PROXY')
+@click.option(
+    '-c',
+    '--callback',
+    default=lambda: os.environ.get('MALICE_ENDPOINT', ''),
+    help='POST results back to Malice webhook [$MALICE_ENDPOINT]',
+    metavar='ENDPOINT')
+@click.option(
+    'eshost',
+    '--elasticsearch',
+    default=lambda: os.environ.get('MALICE_ELASTICSEARCH', ''),
+    help='elasticsearch address for Malice to store results [$MALICE_ELASTICSEARCH]',
+    metavar='HOST')
+@click.option(
+    '--timeout',
+    default=lambda: os.environ.get('MALICE_TIMEOUT', 10),
+    help='malice plugin timeout (default: 10) [$MALICE_TIMEOUT]',
+    metavar='SECS')
+@click.option('-d', '--dump', is_flag=True, help='dump possibly embedded binaries')
+@click.option(
+    '--output',
+    default=lambda: os.environ.get('MALICE_EXTRACT_PATH', '/malware'),
+    help='where to extract the embedded objects to (default: /malware) [$MALICE_EXTRACT_PATH]',
+    metavar='PATH')
+def scan(file_path, verbose, table, proxy, callback, eshost, timeout, dump, output):
+    """Malice Office/OLE/RTF Scanner"""
 
-    ##
-    # OLE FUNCTIONS
-    #
+    try:
+        # set up logging
+        init_logging(verbose)
 
-    def metadata(self, ole):
-        meta = ole.get_metadata()
-        for attribs in ['SUMMARY_ATTRIBS', 'DOCSUM_ATTRIBS']:
-            self.log('info', "{0} Metadata".format(string_clean(attribs)))
-            rows = []
-            for key in getattr(meta, attribs):
-                rows.append([key, string_clean(getattr(meta, key))])
+        # TODO: check if DOC is too big (max size 3000000 ??)
+        o_results = MalOffice(file_path, should_dump=dump, dump_path=output).run()
 
-            self.log('table', dict(header=['Name', 'Value'], rows=rows))
+        malice_scan = {
+            'id': os.environ.get('MALICE_SCANID', sha256_checksum(file_path)),
+            'name': 'office',
+            'category': 'document',
+            'results': o_results
+        }
+        malice_scan['results']['markdown'] = json2markdown(o_results)
 
-        ole.close()
-
-    def metatimes(self, ole):
-        rows = []
-        rows.append([
-            1, 'Root', '', ole.root.getctime() if ole.root.getctime() else '', ole.root.getmtime() if ole.root.getmtime(
-            ) else ''
-        ])
-
-        counter = 2
-        for obj in ole.listdir(streams=True, storages=True):
-            has_macro = ''
+        # write to elasticsearch
+        if eshost:
             try:
-                if '\x00Attribu' in ole.openstream(obj).read():
-                    has_macro = 'Yes'
-            except:
-                pass
-
-            rows.append([
-                counter, string_clean('/'.join(obj)), has_macro, ole.getctime(obj) if ole.getctime(
-                    obj) else '', ole.getmtime(obj) if ole.getmtime(obj) else ''
-            ])
-
-            counter += 1
-
-        self.log('info', "OLE Structure:")
-        self.log('table', dict(header=['#', 'Object', 'Macro', 'Creation', 'Modified'], rows=rows))
-
-        ole.close()
-
-    def export(self, ole, export_path):
-        if not os.path.exists(export_path):
-            try:
-                os.makedirs(export_path)
+                e = Elastic(eshost, timeout=timeout)
+                e.write(results=malice_scan)
             except Exception as e:
-                self.log('error', "Unable to create directory at {0}: {1}".format(export_path, e))
-                return
+                log.exception("failed to index malice/office results into elasticsearch")
+
+        if table:
+            print(malice_scan['results']['markdown'])
         else:
-            if not os.path.isdir(export_path):
-                self.log('error', "You need to specify a folder, not a file")
-                return
+            o_results.pop('markdown')
+            print(json.dumps(o_results, indent=True))
 
-        for stream in ole.listdir(streams=True, storages=True):
-            try:
-                stream_content = ole.openstream(stream).read()
-            except Exception as e:
-                self.log('warning', "Unable to open stream {0}: {1}".format(string_clean('/'.join(stream)), e))
-                continue
+        # POST dropped files as a JSON blob back to malice server/daemon
+        if callback:
+            proxies = None
+            if proxy:
+                proxies = {
+                    'http': proxy,
+                    'https': proxy,
+                }
+            malice_scan['parent'] = os.environ.get('MALICE_SCANID', sha256_checksum(file_path))
+            requests.post(callback, json=malice_scan, proxies=proxies)
 
-            store_path = os.path.join(export_path, string_clean('-'.join(stream)))
-
-            flash_objects = self.detect_flash(ole.openstream(stream).read())
-            if len(flash_objects) > 0:
-                self.log('info', "Saving Flash objects...")
-                count = 1
-
-                for flash in flash_objects:
-                    # If SWF Is compressed save the swf and the decompressed data seperatly.
-                    if flash[2]:
-                        save_path = '{0}-FLASH-Decompressed{1}'.format(store_path, count)
-                        with open(save_path, 'wb') as flash_out:
-                            flash_out.write(flash[4])
-
-                        self.log('item', "Saved Decompressed Flash File to {0}".format(save_path))
-
-                    save_path = '{0}-FLASH-{1}'.format(store_path, count)
-                    with open(save_path, 'wb') as flash_out:
-                        flash_out.write(flash[3])
-
-                    self.log('item', "Saved Flash File to {0}".format(save_path))
-                    count += 1
-
-            with open(store_path, 'wb') as out:
-                out.write(stream_content)
-
-            self.log('info', "Saved stream to {0}".format(store_path))
-
-        ole.close()
-
-    def oleid(self, ole):
-        has_summary = False
-        is_encrypted = False
-        is_word = False
-        is_excel = False
-        is_ppt = False
-        is_visio = False
-        has_macros = False
-        has_flash = 0
-
-        # SummaryInfo.
-        if ole.exists('\x05SummaryInformation'):
-            suminfo = ole.getproperties('\x05SummaryInformation')
-            has_summary = True
-            # Encryption check.
-            if 0x13 in suminfo:
-                if suminfo[0x13] & 1:
-                    is_encrypted = True
-
-        # Word Check.
-        if ole.exists('WordDocument'):
-            is_word = True
-            s = ole.openstream(['WordDocument'])
-            s.read(10)
-            temp16 = struct.unpack("H", s.read(2))[0]
-
-            if (temp16 & 0x0100) >> 8:
-                is_encrypted = True
-
-        # Excel Check.
-        if ole.exists('Workbook') or ole.exists('Book'):
-            is_excel = True
-
-        # Macro Check.
-        if ole.exists('Macros'):
-            has_macros = True
-
-        for obj in ole.listdir(streams=True, storages=True):
-            if 'VBA' in obj:
-                has_macros = True
-
-        # PPT Check.
-        if ole.exists('PowerPoint Document'):
-            is_ppt = True
-
-        # Visio check.
-        if ole.exists('VisioDocument'):
-            is_visio = True
-
-        # Flash Check.
-        for stream in ole.listdir():
-            has_flash += len(self.detect_flash(ole.openstream(stream).read()))
-
-        # Put it all together.
-        rows = [
-            ['Summary Information', has_summary], ['Word', is_word], ['Excel', is_excel], ['PowerPoint', is_ppt],
-            ['Visio', is_visio], ['Encrypted', is_encrypted], ['Macros', has_macros], ['Flash Objects', has_flash]
-        ]
-
-        # Print the results.
-        self.log('info', "OLE Info:")
-        # TODO: There are some non ascii chars that need stripping.
-        self.log('table', dict(header=['Test', 'Result'], rows=rows))
-
-        ole.close()
-
-    ##
-    # XML FUNCTIONS
-    #
-
-    def meta_data(self, xml_string):
-        doc_meta = []
-        xml_root = ET.fromstring(xml_string)
-        for child in xml_root:
-            doc_meta.append([child.tag.split('}')[1], child.text])
-        return doc_meta
-
-    def xmlmeta(self, zip_xml):
-        media_list = []
-        embedded_list = []
-        vba_list = []
-        for name in zip_xml.namelist():
-            if name == 'docProps/app.xml':
-                meta1 = self.meta_data(zip_xml.read(name))
-            if name == 'docProps/core.xml':
-                meta2 = self.meta_data(zip_xml.read(name))
-            if name.startswith('word/media/'):
-                media_list.append(name.split('/')[-1])
-            # if name is vba, need to add multiple macros
-            if name.startswith('word/embeddings'):
-                embedded_list.append(name.split('/')[-1])
-            if name == 'word/vbaProject.bin':
-                vba_list.append(name.split('/')[-1])
-
-        # Print the results.
-        self.log('info', "App MetaData:")
-        self.log('table', dict(header=['Field', 'Value'], rows=meta1))
-        self.log('info', "Core MetaData:")
-        self.log('table', dict(header=['Field', 'Value'], rows=meta2))
-        if len(embedded_list) > 0:
-            self.log('info', "Embedded Objects")
-            for item in embedded_list:
-                self.log('item', item)
-        if len(vba_list) > 0:
-            self.log('info', "Macro Objects")
-            for item in vba_list:
-                self.log('item', item)
-        if len(media_list) > 0:
-            self.log('info', "Media Objects")
-            for item in media_list:
-                self.log('item', item)
-
-    def xmlstruct(self, zip_xml):
-        self.log('info', "Document Structure")
-        for name in zip_xml.namelist():
-            self.log('item', name)
-
-    def xml_export(self, zip_xml, export_path):
-        if not os.path.exists(export_path):
-            try:
-                os.makedirs(export_path)
-            except Exception as e:
-                self.log('error', "Unable to create directory at {0}: {1}".format(export_path, e))
-                return
-        else:
-            if not os.path.isdir(export_path):
-                self.log('error', "You need to specify a folder, not a file")
-                return
-        try:
-            zip_xml.extractall(export_path)
-            self.log('info', "Saved all objects to {0}".format(export_path))
-        except Exception as e:
-            self.log('error', "Unable to export objects: {0}".format(e))
-            return
+    except Exception as e:
+        log.exception("failed to run malice plugin: office")
         return
 
-    ##
-    # VBA Functions
-    #
 
-    def parse_vba(self, save_path):
-        save = False
-        vbaparser = VBA_Parser(__sessions__.current.file.path)
-        # Check for Macros
-        if not vbaparser.detect_vba_macros():
-            self.log('error', "No Macro's Detected")
-            return
-        self.log('info', "Macro's Detected")
-        #try:
-        if True:
-            an_results = {'AutoExec': [],
-                          'Suspicious': [],
-                          'IOC': [],
-                          'Hex String': [],
-                          'Base64 String': [],
-                          'Dridex string': [],
-                          'VBA string': []}
-            for (filename, stream_path, vba_filename, vba_code) in vbaparser.extract_macros():
-                self.log('info', "Stream Details")
-                self.log('item', "OLE Stream: {0}".format(string_clean(stream_path)))
-                self.log('item', "VBA Filename: {0}".format(string_clean(vba_filename)))
-                # Analyse the VBA Code
-                vba_scanner = VBA_Scanner(vba_code)
-                analysis = vba_scanner.scan(include_decoded_strings=True)
-                for kw_type, keyword, description in analysis:
-                    an_results[kw_type].append([string_clean_hex(keyword), description])
+@office.command('web', short_help='start web service')
+def web():
+    """Malice Office/OLE/RTF Web Service"""
 
-                # Save the code to external File
-                if save_path:
+    # set up logging
+    init_logging(logging.ERROR)
+
+    app = Flask(__name__)
+    app.config['UPLOAD_FOLDER'] = '/malware'
+    app.config['OUTPUT_FOLDER'] = '/malware/dump'
+    # app.config['UPLOAD_FOLDER'] = 'test/web'
+    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+
+    @app.errorhandler(400)
+    def bad_request(error):
+        return 'Bad requests: you must upload a malware', 400
+
+    @app.errorhandler(500)
+    def server_error(exception):
+        return 'Internal Server Error: \n{}'.format(exception), 500
+
+    @app.route('/scan', methods=['GET', 'POST'])
+    def upload():
+        if request.method == 'POST':
+            # check if the post request has the file part
+            if 'malware' not in request.files:
+                return redirect(request.url)
+            upload_file = request.files['malware']
+            # if user does not select file, browser also
+            # submit an empty part without filename
+            if upload_file.filename == '':
+                abort(400)
+            if upload_file:
+                filename = secure_filename(upload_file.filename)
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                upload_file.save(file_path)
+                try:
+                    o_results = MalOffice(file_path).run()
+                    # o_results['markdown'] = json2markdown(o_results)
+                    return jsonify(o_results), 200
+                except Exception as e:
+                    log.exception("failed to run malice plugin: {}".format('office'))
+                    return e, 500
+                finally:
                     try:
-                        with open(save_path, 'a') as out:
-                            out.write(vba_code)
-                        save = True
-                    except:
-                        self.log('error', "Unable to write to {0}".format(save_path))
-                        return
-            # Print all Tables together
-            self.log('info', "AutoRun Macros Found")
-            self.log('table', dict(header=['Method', 'Description'], rows=an_results['AutoExec']))
+                        os.remove(file_path)
+                    except OSError as e:
+                        log.exception("failed to remove file {} - {}".format(e.filename, e.strerror))
 
-            self.log('info', "Suspicious Keywords Found")
-            self.log('table', dict(header=['KeyWord', 'Description'], rows=an_results['Suspicious']))
+        return "Please upload malware to me... I thirst."
 
-            self.log('info', "Possible IOC's")
-            self.log('table', dict(header=['IOC', 'Type'], rows=an_results['IOC']))
+    # start web service
+    app.run(host='0.0.0.0', port=3993)
 
-            self.log('info', "Hex Strings")
-            self.log('table', dict(header=['Decoded', 'Raw'], rows=an_results['Hex String']))
 
-            self.log('info', "Base64 Strings")
-            self.log('table', dict(header=['Decoded', 'Raw'], rows=an_results['Base64 String']))
-
-            self.log('info', "Dridex string")
-            self.log('table', dict(header=['Decoded', 'Raw'], rows=an_results['Dridex string']))
-
-            self.log('info', "VBA string")
-            self.log('table', dict(header=['Decoded', 'Raw'], rows=an_results['VBA string']))
-
-            if save:
-                self.log('success', "Writing VBA Code to {0}".format(save_path))
-        #except:
-        #self.log('error', "Unable to Process File")
-        # Close the file
-        vbaparser.close()
-
-    # Main starts here
-    def run(self):
-        super(Office, self).run()
-        if self.args is None:
-            return
-
-        if not __sessions__.is_set():
-            self.log('error', "No open session")
-            return
-
-        if not HAVE_OLE:
-            self.log('error', "Missing dependency, install OleFileIO (`pip install olefile oletools`)")
-            return
-
-        file_data = __sessions__.current.file.data
-        if file_data.startswith('<?xml'):
-            OLD_XML = file_data
-        else:
-            OLD_XML = False
-
-        if file_data.startswith('MIME-Version:') and 'application/x-mso' in file_data:
-            MHT_FILE = file_data
-        else:
-            MHT_FILE = False
-
-        # Tests to check for valid Office structures.
-        OLE_FILE = olefile.isOleFile(__sessions__.current.file.path)
-        XML_FILE = zipfile.is_zipfile(__sessions__.current.file.path)
-        if OLE_FILE:
-            ole = olefile.OleFileIO(__sessions__.current.file.path)
-        elif XML_FILE:
-            zip_xml = zipfile.ZipFile(__sessions__.current.file.path, 'r')
-        elif OLD_XML:
-            pass
-        elif MHT_FILE:
-            pass
-        else:
-            self.log('error', "Not a valid office document")
-            return
-
-        if self.args.export is not None:
-            if OLE_FILE:
-                self.export(ole, self.args.export)
-            elif XML_FILE:
-                self.xml_export(zip_xml, self.args.export)
-        elif self.args.meta:
-            if OLE_FILE:
-                self.metadata(ole)
-            elif XML_FILE:
-                self.xmlmeta(zip_xml)
-        elif self.args.streams:
-            if OLE_FILE:
-                self.metatimes(ole)
-            elif XML_FILE:
-                self.xmlstruct(zip_xml)
-        elif self.args.oleid:
-            if OLE_FILE:
-                self.oleid(ole)
-            else:
-                self.log('error', "Not an OLE file")
-        elif self.args.vba or self.args.code:
-            self.parse_vba(self.args.code)
-        else:
-            self.log('error', 'At least one of the parameters is required')
-            self.usage()
+if __name__ == '__main__':
+    office()
