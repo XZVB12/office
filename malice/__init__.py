@@ -2,6 +2,7 @@
 # This file is part of MaliceIO - https://github.com/malice-plugins/pdf
 # See the file 'LICENSE' for copying permission.
 
+
 __description__ = 'Malice Office/OLE/RTF Plugin - office helper util'
 __author__ = 'blacktop - <https://github.com/blacktop>'
 __version__ = '0.1.0'
@@ -15,6 +16,7 @@ import tempfile
 import time
 from io import BytesIO
 from os import path
+from utils import sha256_checksum
 
 log = logging.getLogger(__name__)
 

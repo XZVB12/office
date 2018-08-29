@@ -68,3 +68,7 @@ debug
 
 *.bu
 .circleci/build_num
+.idea
+venv
+test/web
+test/dump

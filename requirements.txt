@@ -7,6 +7,6 @@ Flask==1.0.2
 Werkzeug==0.14.1
 requests==2.19.1
 
-# olefile==0.45.1
-# git+https://github.com/decalage2/oletools.git@v0.53.1#egg=oletools
-# git+https://github.com/decalage2/ViperMonkey.git#egg=vipermonkey
+olefile==0.45.1
+git+https://github.com/decalage2/oletools.git@v0.53.1#egg=oletools
+git+https://github.com/decalage2/ViperMonkey.git#egg=vipermonkey

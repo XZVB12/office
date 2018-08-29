@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 # This file is part of Viper - https://github.com/viper-framework/viper
 # See the file 'LICENSE' for copying permission.
-
 '''
 Code based on the python-oletools package by Philippe Lagadec 2012-10-18
 http://www.decalage.info/python/oletools
@@ -9,15 +8,14 @@ http://www.decalage.info/python/oletools
 
 import os
 import struct
-import zipfile
-import xml.etree.ElementTree as ET
 import sys
-
-from viper.common.utils import string_clean, string_clean_hex
-from viper.common.abstracts import Module
-from viper.core.session import __sessions__
-
+import xml.etree.ElementTree as ET
+import zipfile
 from io import BytesIO, open
+
+# from viper.common.abstracts import Module
+# from viper.common.utils import string_clean, string_clean_hex
+# from viper.core.session import __sessions__
 
 try:
     import olefile
@@ -116,9 +114,7 @@ class Office(Module):
     def metatimes(self, ole):
         rows = []
         rows.append([
-            1,
-            'Root',
-            '',
+            1, 'Root', '',
             ole.root.getctime() if ole.root.getctime() else '',
             ole.root.getmtime() if ole.root.getmtime() else ''
         ])
@@ -134,8 +130,7 @@ class Office(Module):
 
             rows.append([
                 counter,
-                string_clean('/'.join(obj)),
-                has_macro,
+                string_clean('/'.join(obj)), has_macro,
                 ole.getctime(obj) if ole.getctime(obj) else '',
                 ole.getmtime(obj) if ole.getmtime(obj) else ''
             ])
@@ -243,16 +238,8 @@ class Office(Module):
             has_flash += len(self.detect_flash(ole.openstream(stream).read()))
 
         # Put it all together.
-        rows = [
-            ['Summary Information', has_summary],
-            ['Word', is_word],
-            ['Excel', is_excel],
-            ['PowerPoint', is_ppt],
-            ['Visio', is_visio],
-            ['Encrypted', is_encrypted],
-            ['Macros', has_macros],
-            ['Flash Objects', has_flash]
-        ]
+        rows = [['Summary Information', has_summary], ['Word', is_word], ['Excel', is_excel], ['PowerPoint', is_ppt],
+                ['Visio', is_visio], ['Encrypted', is_encrypted], ['Macros', has_macros], ['Flash Objects', has_flash]]
 
         # Print the results.
         self.log('info', "OLE Info:")
@@ -352,7 +339,15 @@ class Office(Module):
         self.log('info', "Macro's Detected")
         # try:
         if True:
-            an_results = {'AutoExec': [], 'Suspicious': [], 'IOC': [], 'Hex String': [], 'Base64 String': [], 'Dridex string': [], 'VBA string': []}
+            an_results = {
+                'AutoExec': [],
+                'Suspicious': [],
+                'IOC': [],
+                'Hex String': [],
+                'Base64 String': [],
+                'Dridex string': [],
+                'VBA string': []
+            }
             for (filename, stream_path, vba_filename, vba_code) in vbaparser.extract_macros():
                 self.log('info', "Stream Details")
                 self.log('item', "OLE Stream: {0}".format(string_clean(stream_path)))
@@ -497,13 +492,12 @@ class Office(Module):
     def get_dde(self, file_path):
         try:
             dde_result = msodde.process_file(file_path, 'only dde')
-            dde_fields = [[i+1, x.strip()] for i, x in enumerate(dde_result.split('\n'))]
+            dde_fields = [[i + 1, x.strip()] for i, x in enumerate(dde_result.split('\n'))]
             if (len(dde_fields) == 1) and (dde_fields[0][1] == ''):
                 self.log('info', "No DDE Links Detected.")
             else:
                 self.log('success', "DDE Links Detected.")
                 header = ['#', 'DDE']
-                self.log('table', dict(header=header,
-                                       rows=dde_fields))
+                self.log('table', dict(header=header, rows=dde_fields))
         except Exception as exc:
             self.log('error', "Unable to Process File")
